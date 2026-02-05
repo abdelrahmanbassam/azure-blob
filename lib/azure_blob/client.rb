@@ -16,7 +16,7 @@ module AzureBlob
   # AzureBlob Client class. You interact with the Azure Blob api
   # through an instance of this class.
   class Client
-    def initialize(account_name:, access_key: nil, principal_id: nil, container:, host: nil, **options)
+    def initialize(account_name: account_name, access_key: nil, principal_id: nil, container:, host: nil, **options)
       @account_name = account_name
       @container = container
       @host = host
@@ -76,7 +76,7 @@ module AzureBlob
         "x-ms-range": options[:start] && "bytes=#{options[:start]}-#{options[:end]}",
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:).get
+      Http.new(uri, headers, signer: signer).get
     end
 
     # Copy a blob between containers or within the same container
@@ -102,7 +102,7 @@ module AzureBlob
         "x-ms-requires-sync": "true",
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:, **options.slice(:metadata, :tags)).put
+      Http.new(uri, headers, signer: signer, **options.slice(:metadata, :tags)).put
     end
 
     # Delete a blob
@@ -122,7 +122,7 @@ module AzureBlob
         "x-ms-delete-snapshots": options[:delete_snapshots] || "include",
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:).delete
+      Http.new(uri, headers, signer: signer).delete
     end
 
     # Delete all blobs prefixed by the given prefix.
@@ -134,7 +134,7 @@ module AzureBlob
     #
     # Look delete_blob for the list of options.
     def delete_prefix(prefix, options = {})
-      results = list_blobs(prefix:)
+      results = list_blobs(prefix: prefix)
       results.each { |key| delete_blob(key) }
     end
 
@@ -162,7 +162,7 @@ module AzureBlob
         query[:marker] = marker
         query.reject! { |key, value| value.to_s.empty? }
         uri.query = URI.encode_www_form(**query)
-        response = Http.new(uri, additional_headers(options), signer:).get
+        response = Http.new(uri, additional_headers(options), signer: signer).get
       end
 
       BlobList.new(fetcher)
@@ -178,7 +178,7 @@ module AzureBlob
       uri = generate_uri("#{container}/#{key}")
       uri.query = URI.encode_www_form(timeout: options[:timeout]) if options[:timeout]
 
-      response = Http.new(uri, additional_headers(options), signer:).head
+      response = Http.new(uri, additional_headers(options), signer: signer).head
 
       Blob.new(response)
     end
@@ -204,7 +204,7 @@ module AzureBlob
       query = { comp: "tags" }
       query[:timeout] = options[:timeout] if options[:timeout]
       uri.query = URI.encode_www_form(**query)
-      response = Http.new(uri, additional_headers(options), signer:).get
+      response = Http.new(uri, additional_headers(options), signer: signer).get
 
       Tags.from_response(response).to_h
     end
@@ -219,7 +219,7 @@ module AzureBlob
       query = { restype: "container" }
       query[:timeout] = options[:timeout] if options[:timeout]
       uri.query = URI.encode_www_form(**query)
-      response = Http.new(uri, additional_headers(options), signer:, raise_on_error: false).head
+      response = Http.new(uri, additional_headers(options), signer: signer, raise_on_error: false).head
 
       Container.new(response)
     end
@@ -244,7 +244,7 @@ module AzureBlob
       query = { restype: "container" }
       query[:timeout] = options[:timeout] if options[:timeout]
       uri.query = URI.encode_www_form(**query)
-      response = Http.new(uri, headers, signer:).put
+      response = Http.new(uri, headers, signer: signer).put
     end
 
     # Delete the container
@@ -255,7 +255,7 @@ module AzureBlob
       query = { restype: "container" }
       query[:timeout] = options[:timeout] if options[:timeout]
       uri.query = URI.encode_www_form(**query)
-      response = Http.new(uri, additional_headers(options), signer:).delete
+      response = Http.new(uri, additional_headers(options), signer: signer).delete
     end
 
     # Return a URI object to a resource in the container. Takes a path.
@@ -277,9 +277,9 @@ module AzureBlob
     # - A permission string (+"r"+, +"rw"+)
     # - expiry as a UTC iso8601 time string
     # - options
-    def signed_uri(key, permissions:, expiry:, **options)
+    def signed_uri(key, permissions: permissions, expiry: expiry, **options)
       uri = generate_uri("#{container}/#{key}")
-      uri.query = signer.sas_token(uri, permissions:, expiry:, **options)
+      uri.query = signer.sas_token(uri, permissions: permissions, expiry: expiry, **options)
       uri
     end
 
@@ -306,7 +306,7 @@ module AzureBlob
         "x-ms-blob-content-disposition": options[:content_disposition],
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:, **options.slice(:metadata, :tags)).put(nil)
+      Http.new(uri, headers, signer: signer, **options.slice(:metadata, :tags)).put(nil)
     end
 
     # Append a block to an Append Blob
@@ -330,7 +330,7 @@ module AzureBlob
         "Content-MD5": options[:content_md5],
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:).put(content)
+      Http.new(uri, headers, signer: signer).put(content)
     end
 
     # Uploads a block to a blob.
@@ -356,7 +356,7 @@ module AzureBlob
         "Content-MD5": options[:content_md5],
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:).put(content)
+      Http.new(uri, headers, signer: signer).put(content)
 
       block_id
     end
@@ -387,7 +387,7 @@ module AzureBlob
         "x-ms-blob-content-disposition": options[:content_disposition],
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:, **options.slice(:metadata, :tags)).put(content)
+      Http.new(uri, headers, signer: signer, **options.slice(:metadata, :tags)).put(content)
     end
 
   private
@@ -425,7 +425,7 @@ module AzureBlob
         "x-ms-blob-content-disposition": options[:content_disposition],
       }.merge(additional_headers(options))
 
-      Http.new(uri, headers, signer:, **options.slice(:metadata, :tags)).put(content.read)
+      Http.new(uri, headers, signer: signer, **options.slice(:metadata, :tags)).put(content.read)
     end
 
     def content_size(content)
@@ -453,8 +453,8 @@ module AzureBlob
           end
 
           using_managed_identities ?
-            AzureBlob::EntraIdSigner.new(account_name:, host:, principal_id:) :
-            AzureBlob::SharedKeySigner.new(account_name:, access_key:, host:)
+            AzureBlob::EntraIdSigner.new(account_name: account_name, host: host, principal_id: principal_id) :
+            AzureBlob::SharedKeySigner.new(account_name: account_name, access_key: access_key, host: host)
         end
     end
 
