@@ -16,7 +16,7 @@ module AzureBlob
   # AzureBlob Client class. You interact with the Azure Blob api
   # through an instance of this class.
   class Client
-    def initialize(account_name: account_name, access_key: nil, principal_id: nil, container:, host: nil, **options)
+    def initialize(account_name: nil, access_key: nil, principal_id: nil, container:, host: nil, **options)
       @account_name = account_name
       @container = container
       @host = host
@@ -277,7 +277,7 @@ module AzureBlob
     # - A permission string (+"r"+, +"rw"+)
     # - expiry as a UTC iso8601 time string
     # - options
-    def signed_uri(key, permissions: permissions, expiry: expiry, **options)
+    def signed_uri(key, permissions: nil, expiry: nil, **options)
       uri = generate_uri("#{container}/#{key}")
       uri.query = signer.sas_token(uri, permissions: permissions, expiry: expiry, **options)
       uri
